@@ -168,3 +168,16 @@ impl<F: PrimeField32> GrindingChallenger for CanonicalKeccakChallenger32<F> {
 }
 
 impl<F: PrimeField32> FieldChallenger<F> for CanonicalKeccakChallenger32<F> {}
+
+#[cfg(test)]
+mod tests {
+    use super::KeccakByteChallenger;
+
+    #[test]
+    fn grinding_witness_uses_little_endian_bytes() {
+        let challenger = KeccakByteChallenger::new(b"Spartan".to_vec());
+
+        assert!(challenger.check_witness_u32(8, 64));
+        assert!(!challenger.check_witness_u32(8, 63));
+    }
+}

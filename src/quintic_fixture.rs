@@ -39,6 +39,24 @@ pub fn build_quintic_k22_jb100_fixture_with_folding_schedule_and_pow_bits(
     starting_log_inv_rate: usize,
     rs_domain_initial_reduction_factor: usize,
 ) -> anyhow::Result<QuinticFixture> {
+    build_quintic_jb100_fixture_with_folding_schedule_and_pow_bits(
+        QUINTIC_K22_JB100_NUM_VARIABLES,
+        pow_bits,
+        folding_schedule,
+        first_round_folding_factor,
+        starting_log_inv_rate,
+        rs_domain_initial_reduction_factor,
+    )
+}
+
+pub fn build_quintic_jb100_fixture_with_folding_schedule_and_pow_bits(
+    num_variables: usize,
+    pow_bits: u32,
+    folding_schedule: FoldingFactor,
+    first_round_folding_factor: usize,
+    starting_log_inv_rate: usize,
+    rs_domain_initial_reduction_factor: usize,
+) -> anyhow::Result<QuinticFixture> {
     let whir_params = quintic_whir_params_with_pow_bits(
         pow_bits,
         first_round_folding_factor,
@@ -48,7 +66,7 @@ pub fn build_quintic_k22_jb100_fixture_with_folding_schedule_and_pow_bits(
     build_standalone_fixture_with_folding_factor::<EF5>(
         QUINTIC_K22_JB100_SECURITY,
         whir_params,
-        QUINTIC_K22_JB100_NUM_VARIABLES,
+        num_variables,
         folding_schedule,
     )
 }

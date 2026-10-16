@@ -41,4 +41,4 @@ p3-util = { git = "https://github.com/Plonky3/Plonky3.git", rev = "fc7d591e6ec54
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
-whir-p3 = { path = "../whir-p3", default-features = false }
+whir-p3 = { git = "https://github.com/alxkzmn/whir-p3.git", rev = "06dded8025f1a125fcbc720ef6f97e14ed31c2a9", default-features = false }

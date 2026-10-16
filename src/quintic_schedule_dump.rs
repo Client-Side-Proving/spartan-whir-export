@@ -240,8 +240,8 @@ pub fn build_quintic_schedule_dump(
         target_max_derived_pow_bits: TARGET_MAX_DERIVED_POW_BITS,
         soundness_assumption: "JohnsonBound",
         max_starting_log_inv_rate,
-        whir_p3_revision: git_value(&["../whir-p3", "whir-p3"], &["rev-parse", "HEAD"]),
-        whir_p3_dirty: !git_value(&["../whir-p3", "whir-p3"], &["status", "--porcelain"]).is_empty(),
+        whir_p3_revision: env!("SPARTAN_WHIR_EXPORT_WHIR_REVISION").to_owned(),
+        whir_p3_dirty: false,
         selectable_prefilter: StructuralPrefilter {
             formula: "verifier structural score plus calibrated prover PoW score; verifier structural score = total_query_rows + total_row_values + merkle_decommitments + merkle_compressions + transcript_elements; prover PoW work units = sum(2^pow_bits)",
             keep_within_factor: 2.0,
@@ -1173,22 +1173,6 @@ fn xorshift64(mut value: u64) -> u64 {
     value ^= value >> 7;
     value ^= value << 17;
     value
-}
-
-fn git_value(paths: &[&str], args: &[&str]) -> String {
-    paths
-        .iter()
-        .find_map(|path| {
-            std::process::Command::new("git")
-                .arg("-C")
-                .arg(path)
-                .args(args)
-                .output()
-                .ok()
-                .filter(|output| output.status.success())
-                .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned())
-        })
-        .unwrap_or_else(|| "unknown".to_owned())
 }
 
 #[cfg(test)]

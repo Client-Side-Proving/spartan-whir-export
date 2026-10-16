@@ -6,7 +6,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 use spartan_whir_export::{
-    quintic_fixture::build_quintic_k22_jb100_fixture_with_folding_schedule_and_pow_bits,
+    quintic_fixture::build_quintic_jb100_fixture_with_folding_schedule_and_pow_bits,
     quintic_schedule_dump::{build_default_quintic_schedule_dump, STRUCTURAL_PREFILTER_CAP},
 };
 use whir_p3::parameters::FoldingFactor;
@@ -34,6 +34,7 @@ struct ProverMicroReport {
 
 #[derive(Debug, Clone)]
 struct CandidateSpec {
+    num_variables: usize,
     label: String,
     requested_pow_bits: u32,
     folding_variant: String,
@@ -248,16 +249,13 @@ impl Options {
 fn load_candidates(options: &Options) -> anyhow::Result<(usize, Vec<CandidateSpec>)> {
     if let Some(path) = &options.schedule {
         let value: serde_json::Value = serde_json::from_slice(&std::fs::read(path)?)?;
-        let num_variables = value
-            .get("num_variables")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(22) as usize;
+        let num_variables = usize_field(&value, "num_variables")?;
         let candidates = value
             .get("candidates")
             .and_then(serde_json::Value::as_array)
             .ok_or_else(|| anyhow::anyhow!("schedule JSON is missing candidates array"))?
             .iter()
-            .map(candidate_spec_from_json)
+            .map(|value| candidate_spec_from_json(value, num_variables))
             .collect::<anyhow::Result<Vec<_>>>()?;
         return Ok((num_variables, candidates));
     }
@@ -267,6 +265,7 @@ fn load_candidates(options: &Options) -> anyhow::Result<(usize, Vec<CandidateSpe
         .candidates
         .iter()
         .map(|candidate| CandidateSpec {
+            num_variables: dump.num_variables,
             label: candidate.label.clone(),
             requested_pow_bits: candidate.requested_pow_bits,
             folding_variant: candidate.folding_schedule.variant.to_owned(),
@@ -283,11 +282,15 @@ fn load_candidates(options: &Options) -> anyhow::Result<(usize, Vec<CandidateSpe
     Ok((dump.num_variables, candidates))
 }
 
-fn candidate_spec_from_json(value: &serde_json::Value) -> anyhow::Result<CandidateSpec> {
+fn candidate_spec_from_json(
+    value: &serde_json::Value,
+    num_variables: usize,
+) -> anyhow::Result<CandidateSpec> {
     let folding = value
         .get("folding_schedule")
         .ok_or_else(|| anyhow::anyhow!("candidate is missing folding_schedule"))?;
     Ok(CandidateSpec {
+        num_variables,
         label: string_field(value, "label")?.to_owned(),
         requested_pow_bits: u32_field(value, "requested_pow_bits")?,
         folding_variant: string_field(folding, "variant")?.to_owned(),
@@ -418,6 +421,7 @@ fn run_candidate_child_once(
         .arg(candidate.rest_folding_factor.to_string())
         .arg(candidate.starting_log_inv_rate.to_string())
         .arg(candidate.rs_domain_initial_reduction_factor.to_string())
+        .arg(candidate.num_variables.to_string())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -517,8 +521,8 @@ fn run_one_child(args: &[String]) -> anyhow::Result<()> {
         "--run-one prover timings must be compiled with RUSTFLAGS='-C target-cpu=native'"
     );
     anyhow::ensure!(
-        args.len() == 9,
-        "usage: bench_quintic_prover_micro --run-one <label> <pow_bits> <variant> <first_round_folding_factor> <rest_folding_factor> <lir> <rsv>"
+        args.len() == 10,
+        "usage: bench_quintic_prover_micro --run-one <label> <pow_bits> <variant> <first_round_folding_factor> <rest_folding_factor> <lir> <rsv> <num_variables>"
     );
     let label = args[2].clone();
     let pow_bits = args[3].parse::<u32>()?;
@@ -527,6 +531,7 @@ fn run_one_child(args: &[String]) -> anyhow::Result<()> {
     let rest_folding_factor = args[6].parse::<usize>()?;
     let starting_log_inv_rate = args[7].parse::<usize>()?;
     let rs_domain_initial_reduction_factor = args[8].parse::<usize>()?;
+    let num_variables = args[9].parse::<usize>()?;
     let folding_schedule = match variant {
         "Constant" => FoldingFactor::Constant(first_round_folding_factor),
         "ConstantFromSecondRound" => {
@@ -536,7 +541,8 @@ fn run_one_child(args: &[String]) -> anyhow::Result<()> {
     };
 
     let start = Instant::now();
-    let result = build_quintic_k22_jb100_fixture_with_folding_schedule_and_pow_bits(
+    let result = build_quintic_jb100_fixture_with_folding_schedule_and_pow_bits(
+        num_variables,
         pow_bits,
         folding_schedule,
         first_round_folding_factor,
@@ -552,7 +558,7 @@ fn run_one_child(args: &[String]) -> anyhow::Result<()> {
             build_profile: build_profile().to_owned(),
             compile_rustflags: compile_rustflags().to_owned(),
             target_cpu_native: target_cpu_native(),
-            measured_num_variables: 22,
+            measured_num_variables: num_variables,
             seconds: Some(elapsed),
             min_seconds: Some(elapsed),
             median_seconds: Some(elapsed),
@@ -575,7 +581,7 @@ fn run_one_child(args: &[String]) -> anyhow::Result<()> {
             build_profile: build_profile().to_owned(),
             compile_rustflags: compile_rustflags().to_owned(),
             target_cpu_native: target_cpu_native(),
-            measured_num_variables: 22,
+            measured_num_variables: num_variables,
             seconds: Some(elapsed),
             min_seconds: Some(elapsed),
             median_seconds: Some(elapsed),
@@ -639,7 +645,7 @@ fn aggregate_candidate_timing(
         build_profile: build_profile().to_owned(),
         compile_rustflags: compile_rustflags().to_owned(),
         target_cpu_native: target_cpu_native(),
-        measured_num_variables: 22,
+        measured_num_variables: candidate.num_variables,
         seconds: median_seconds,
         min_seconds,
         median_seconds,
