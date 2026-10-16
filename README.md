@@ -1,7 +1,6 @@
 # spartan-whir-export
 
-Rust crate that generates ABI-encoded test fixtures and JSON test vectors for the [Solidity Spartan-WHIR verifier](https://github.com/alxkzmn/sol-spartan-whir).
-WIP workspace with all modules side-by-side for convenience: [spartan-whir-dev](https://github.com/alxkzmn/spartan-whir-dev).
+Rust crate that generates ABI-encoded test fixtures and JSON test vectors for the [Solidity Spartan-WHIR verifier](https://github.com/ethereum/spartan-whir-p3).
 
 This exporter belongs to the standalone WHIR Solidity line. It intentionally does not depend on
 the current client-side `spartan-whir` SNARK. It uses `whir-p3` and pins its Plonky3 dependencies
